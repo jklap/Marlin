@@ -139,8 +139,8 @@ void DWIN_SendJpegData(char *jpeg, unsigned long size, unsigned long jpgAddr)
     uint8_t cmd_pos = 0;    // Current instruction pointer state
     uint32_t cmd_state = 0; // Queue frame tail detection status
     char buffer[20] = {0};
-    if (buffer > 0) {
-      // fake call to buffer to ommit compiler warning
+    if (reinterpret_cast<int>(buffer) > 0) {
+      // fake call to buffer to omit compiler warning
     }    
     MS = millis();
     while(1)

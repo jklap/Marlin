@@ -17,7 +17,7 @@
 
 #include <WString.h>
 #include <stdio.h>
-#include <string.h>
+#include <string>
 //#include <Arduino.h>
 
 #include "../../../inc/MarlinConfig.h"
@@ -1384,6 +1384,7 @@ void RTSSHOW::RTS_HandleData(void)
       }      
       else if(recdat.data[0] == 9)
       {
+#if ENABLED(POWER_LOSS_RECOVERY)
         if (recovery.enabled) {
           RTS_SndData(102, POWERCONTINUE_CONTROL_ICON_VP);
           recovery.enabled = false;
@@ -1401,6 +1402,7 @@ void RTSSHOW::RTS_HandleData(void)
           recovery.save(true);
         }
         settings.save();
+#endif
       }
       break;
 
@@ -1464,7 +1466,9 @@ void RTSSHOW::RTS_HandleData(void)
             RTS_SDcard_Stop();
             Update_Time_Value = 0;
             RTS_ShowPage(1);
-            RefreshBrightnessAtPrint(0);
+            #if ENABLED(GCODE_PREVIEW_ENABLED)
+                RefreshBrightnessAtPrint(0);
+            #endif
             print_job_timer.stop();
           }
           else if(PoweroffContinue == false)
@@ -4839,7 +4843,11 @@ void RTS_CleanPrintFile(void)
 
 void RTS_LoadMainsiteIcons(void)
 {
-  rtscheck.RTS_SndData(recovery.enabled ? 101 : 102, POWERCONTINUE_CONTROL_ICON_VP);
+#if ENABLED(POWER_LOSS_RECOVERY)
+    rtscheck.RTS_SndData(recovery.enabled ? 101 : 102, POWERCONTINUE_CONTROL_ICON_VP);
+#else
+    rtscheck.RTS_SndData(102, POWERCONTINUE_CONTROL_ICON_VP);
+#endif
   rtscheck.RTS_SndData(runout.enabled ? 101 : 102, FILAMENT_CONTROL_ICON_VP);
   rtscheck.RTS_SndData(lcd_rts_settings.external_m73 ? 206 : 205, EXTERNAL_M73_ICON_VP);
   rtscheck.RTS_SndData(bedlevel.mesh_is_valid() ? 213 : 212, MESH_SIZE_ICON_ONOFF_VP);
