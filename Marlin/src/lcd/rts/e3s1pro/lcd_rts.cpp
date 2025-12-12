@@ -8,7 +8,7 @@
 
 #include <WString.h>
 #include <stdio.h>
-#include <cstring>
+#include <string>
 //#include <Arduino.h>
 
 #include "../../../inc/MarlinConfig.h"
