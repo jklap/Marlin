@@ -48,7 +48,7 @@
 //#define DISABLE_JTAGSWD
 
 // Ignore temp readings during development.
-//#define BOGUS_TEMPERATURE_GRACE_PERIOD    2000
+#define BOGUS_TEMPERATURE_GRACE_PERIOD    2000
 
 // Enable EEPROM Emulation for this board as it doesn't have EEPROM
 #if ANY(NO_EEPROM_SELECTED, FLASH_EEPROM_EMULATION)

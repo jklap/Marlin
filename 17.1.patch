@@ -1,0 +1,182 @@
+diff --git a/Marlin/Configuration.h b/Marlin/Configuration.h
+index 599a76c147..5b0ec74e41 100644
+--- a/Marlin/Configuration.h
++++ b/Marlin/Configuration.h
+@@ -61,7 +61,7 @@
+ // @section info
+ 
+ // Author info of this build printed to the host during boot and M115
+-#define STRING_CONFIG_H_AUTHOR "Thomas Toka fork" // Who made the changes.
++//#define STRING_CONFIG_H_AUTHOR "Thomas Toka fork" // Who made the changes.
+ //#define CUSTOM_VERSION_FILE Version.h // Path from the root directory (no quotes)
+ 
+ // @section machine
+diff --git a/Marlin/Configuration_adv.h b/Marlin/Configuration_adv.h
+index 65dcd06089..a85a0b7519 100644
+--- a/Marlin/Configuration_adv.h
++++ b/Marlin/Configuration_adv.h
+@@ -1767,7 +1767,7 @@
+    * an option on the LCD screen to continue the print from the last-known
+    * point in the file.
+    */
+-  #define POWER_LOSS_RECOVERY
++//#define POWER_LOSS_RECOVERY
+   #if ENABLED(POWER_LOSS_RECOVERY)
+     #define PLR_ENABLED_DEFAULT       false // Power-Loss Recovery enabled by default. (Set with 'M413 Sn' & M500)
+     //#define PLR_BED_THRESHOLD BED_MAXTEMP // (°C) Skip user confirmation at or above this bed temperature (0 to disable)
+diff --git a/Marlin/src/lcd/rts/e3s1pro/lcd_rts.cpp b/Marlin/src/lcd/rts/e3s1pro/lcd_rts.cpp
+index 4ba5d0e30f..350a35cc1f 100644
+--- a/Marlin/src/lcd/rts/e3s1pro/lcd_rts.cpp
++++ b/Marlin/src/lcd/rts/e3s1pro/lcd_rts.cpp
+@@ -17,7 +17,7 @@
+ 
+ #include <WString.h>
+ #include <stdio.h>
+-#include <string.h>
++#include <string>
+ //#include <Arduino.h>
+ 
+ #include "../../../inc/MarlinConfig.h"
+@@ -1381,6 +1381,7 @@ void RTSSHOW::RTS_HandleData(void)
+       }      
+       else if(recdat.data[0] == 9)
+       {
++#if ENABLED(POWER_LOSS_RECOVERY)
+         if (recovery.enabled) {
+           RTS_SndData(102, POWERCONTINUE_CONTROL_ICON_VP);
+           recovery.enabled = false;
+@@ -1398,6 +1399,7 @@ void RTSSHOW::RTS_HandleData(void)
+           recovery.save(true);
+         }
+         settings.save();
++#endif
+       }
+       break;
+ 
+@@ -1461,7 +1463,9 @@ void RTSSHOW::RTS_HandleData(void)
+             RTS_SDcard_Stop();
+             Update_Time_Value = 0;
+             RTS_ShowPage(1);
+-            RefreshBrightnessAtPrint(0);
++            #if ENABLED(GCODE_PREVIEW_ENABLED)
++                RefreshBrightnessAtPrint(0);
++            #endif
+             print_job_timer.stop();
+           }
+           else if(PoweroffContinue == false)
+@@ -4836,7 +4840,11 @@ void RTS_CleanPrintFile(void)
+ 
+ void RTS_LoadMainsiteIcons(void)
+ {
+-  rtscheck.RTS_SndData(recovery.enabled ? 101 : 102, POWERCONTINUE_CONTROL_ICON_VP);
++#if ENABLED(POWER_LOSS_RECOVERY)
++    rtscheck.RTS_SndData(recovery.enabled ? 101 : 102, POWERCONTINUE_CONTROL_ICON_VP);
++#else
++    rtscheck.RTS_SndData(102, POWERCONTINUE_CONTROL_ICON_VP);
++#endif
+   rtscheck.RTS_SndData(runout.enabled ? 101 : 102, FILAMENT_CONTROL_ICON_VP);
+   rtscheck.RTS_SndData(lcd_rts_settings.external_m73 ? 206 : 205, EXTERNAL_M73_ICON_VP);
+   rtscheck.RTS_SndData(bedlevel.mesh_is_valid() ? 213 : 212, MESH_SIZE_ICON_ONOFF_VP);
+@@ -5368,4 +5376,4 @@ void ErrorHanding(void)
+   }
+ }
+ 
+-#endif
+\ No newline at end of file
++#endif
+diff --git a/Marlin/src/lcd/rts/e3s1pro/preview.cpp b/Marlin/src/lcd/rts/e3s1pro/preview.cpp
+index 82d57cc329..befe767ffd 100644
+--- a/Marlin/src/lcd/rts/e3s1pro/preview.cpp
++++ b/Marlin/src/lcd/rts/e3s1pro/preview.cpp
+@@ -139,8 +139,8 @@ void DWIN_SendJpegData(char *jpeg, unsigned long size, unsigned long jpgAddr)
+     uint8_t cmd_pos = 0;    // Current instruction pointer state
+     uint32_t cmd_state = 0; // Queue frame tail detection status
+     char buffer[20] = {0};
+-    if (buffer > 0) {
+-      // fake call to buffer to ommit compiler warning
++    if (reinterpret_cast<int>(buffer) > 0) {
++      // fake call to buffer to omit compiler warning
+     }    
+     MS = millis();
+     while(1)
+diff --git a/ini/stm32-common.ini b/ini/stm32-common.ini
+index ec058d1087..d7f0ced504 100644
+--- a/ini/stm32-common.ini
++++ b/ini/stm32-common.ini
+@@ -10,7 +10,15 @@
+ ####################################
+ 
+ [common_stm32]
+-platform         = ststm32@~12.1
++# https://registry.platformio.org/platforms/platformio/ststm32/versions
++# default is 12.1
++# 15.4 is the last version that works for ubl due to memory constraints with default config
++# 15.5 & 15.6 are over by 900 bytes
++# 16.0 is over by 7928 bytes
++# 16.1 is over by 7928 bytes
++# 17.1 works with changes
++# 17.2 fails with SPI related issues
++platform         = ststm32@~17.1
+ board_build.core = stm32
+ build_flags      = ${common.build_flags} -std=gnu++14
+                    -DHAL_STM32 -DPLATFORM_M997_SUPPORT
+diff --git a/ini/stm32f4.ini b/ini/stm32f4.ini
+index 3ca3dc365f..da8b10c9eb 100644
+--- a/ini/stm32f4.ini
++++ b/ini/stm32f4.ini
+@@ -802,7 +802,7 @@ extends                     = env:STM32F401RC_creality
+ build_flags                 = ${stm32_variant.build_flags} -DMCU_STM32F401RC -DSTM32F4
+                               -DSS_TIMER=4 -DTIMER_SERVO=TIM5
+                               -DENABLE_HWSERIAL3 -DTRANSFER_CLOCK_DIV=8
+-                              -DLASER_FEATURE
++                              ;-DLASER_FEATURE
+                               -DENDER_MACHINE_OVERRIDE
+                               -DENDER_3S1_PRO
+                               -DAUTO_BED_LEVELING_BILINEAR
+@@ -867,7 +867,20 @@ board_build.rename            = firmware-{date}-{time}-E3S1Pro-ubl-v032-personal
+ 
+ [env:STM32F401RC_creality_e3s1pro_ubl]
+ extends                     = env:STM32F401RC_creality
+-build_flags                 = ${stm32_variant.build_flags} -DMCU_STM32F401RC -DSTM32F4
++# https://www.crosslink.io/marlin-2-0-memory-usage-by-feature/
++# undef STRING_CONFIG_H_AUTHOR
++# undef POWER_LOSS_RECOVERY
++
++# undef ARC_SUPPORT (keep this one?)
++# define SDCARD_READONLY
++# define DISABLE_M503
++# undef EEPROM_CHITCHAT
++# undef PRINTCOUNTER
++
++build_flags                 = ${stm32_variant.build_flags}
++                              ;-ffast-math
++                              ; -finline-limit=3
++                              -DMCU_STM32F401RC -DSTM32F4
+                               -DSS_TIMER=4 -DTIMER_SERVO=TIM5
+                               -DENABLE_HWSERIAL3 -DTRANSFER_CLOCK_DIV=8
+                               -DENDER_MACHINE_OVERRIDE
+@@ -879,9 +892,10 @@ build_flags                 = ${stm32_variant.build_flags} -DMCU_STM32F401RC -DS
+                               -DMOTHERBOARD=BOARD_CREALITY_V24S1_301F4
+                               -DMESH_INSET_X=25                             
+                               -DMESH_INSET_Y=45
+-                              -DGCODE_PREVIEW_ENABLED
++                              ;-DGCODE_PREVIEW_ENABLED
+                               ;-DG26_MESH_VALIDATION
+ board_build.rename            = firmware-{date}-{time}-E3S1Pro-ubl-v032-F4.bin
++#extra_scripts                 = add_nanolib.py
+ 
+ [env:STM32F401RC_creality_e3s1plus_abl]
+ extends                     = env:STM32F401RC_creality
+diff --git a/platformio.ini b/platformio.ini
+index 2cda24bcb9..c8a3ca5903 100644
+--- a/platformio.ini
++++ b/platformio.ini
+@@ -48,7 +48,7 @@ extra_configs =
+ # Remove '-fmax-errors=5' from build_flags below to see all.
+ #
+ [common]
+-build_flags        = -g3 -D__MARLIN_FIRMWARE__ -DNDEBUG
++build_flags        = -g0 -D__MARLIN_FIRMWARE__ -DNDEBUG
+                      -fmax-errors=5
+ extra_scripts      =
+   pre:buildroot/share/PlatformIO/scripts/configuration.py

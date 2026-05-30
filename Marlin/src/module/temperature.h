@@ -41,7 +41,7 @@
   #include "../feature/fancheck.h"
 #endif
 
-//#define ERR_INCLUDE_TEMP
+#define ERR_INCLUDE_TEMP
 
 #define HOTEND_INDEX TERN0(HAS_MULTI_HOTEND, e)
 #define E_NAME TERN_(HAS_MULTI_HOTEND, e)

@@ -1669,6 +1669,7 @@ void Temperature::_temp_error(
   const heater_id_t heater_id, FSTR_P const serial_msg, FSTR_P const lcd_msg
   OPTARG(ERR_INCLUDE_TEMP, const celsius_float_t deg)
 ) {
+#define BOGUS_TEMPERATURE_GRACE_PERIOD    2000
   #if BOGUS_TEMPERATURE_GRACE_PERIOD
     #define HAS_BOGUS_TEMPERATURE_GRACE_PERIOD 1
   #endif
@@ -1698,6 +1699,11 @@ void Temperature::_temp_error(
       default:
         if (real_heater_id >= 0) SERIAL_ECHO(C('E'), real_heater_id);
     }
+
+      SERIAL_ECHO("test");
+
+      SERIAL_ECHOLNPGM(STR_DETECTED_TEMP_B, deg, STR_DETECTED_TEMP_E);
+
     #if ENABLED(ERR_INCLUDE_TEMP)
       SERIAL_ECHOLNPGM(STR_DETECTED_TEMP_B, deg, STR_DETECTED_TEMP_E);
     #else
@@ -1999,6 +2005,7 @@ void Temperature::mintemp_error(const heater_id_t heater_id OPTARG(ERR_INCLUDE_T
         if (deg > temp_range[e].maxtemp) {
           TERN_(SOVOL_SV06_RTS, rts.gotoPageBeep(ID_KillBadTemp_L, ID_KillBadTemp_D));
           TERN_(E3S1PRO_RTS, RTS_ShowPage(31));
+            SERIAL_ECHOLNPGM("\nA Extruder = ", e, " temp = ", deg, " vs ", temp_range[e].maxtemp);
           MAXTEMP_ERROR(e, deg);
         }
       }
@@ -2973,6 +2980,7 @@ void Temperature::updateTemperaturesFromRawValues() {
     HOTEND_LOOP() {
       const raw_adc_t r = temp_hotend[e].getraw();
       const bool neg = temp_dir[e] < 0, pos = temp_dir[e] > 0;
+        SERIAL_ECHOLNPGM("\nExtruder = ", e, " temp = ", temp_hotend[e].celsius);
       if ((neg && r < temp_range[e].raw_max) || (pos && r > temp_range[e].raw_max))
         MAXTEMP_ERROR(e, temp_hotend[e].celsius);
 
